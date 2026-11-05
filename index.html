@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="en" data-app="app/">
+<head>
+<link rel="icon" href="favicon.ico">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DeliverX — Live demo</title>
+<style>
+  :root { --pw: 380px; /* the control panel's width */
+    --bg: #1b1e24; --card: #252932; --card2: #30353f; --hover: #3a404b; --well: #1b1e24; --edge: #30353f; --edge2: #3a404b;
+    --ink: #e9ecf1; --ink2: #9aa3b2; --ink3: #a9b1be;
+    --client: #c3502a; --driver: #2a64d6; --blue: #7ea6ff; --ok: #5fd08a; --cash: #34c3a5; --owed: #f0b43c; --bad: #ff8a80;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Arabic", sans-serif; }
+  body { display: flex; gap: 20px; padding: 16px; overflow: hidden; }
+
+  /* ── phones ─────────────────────────────────────────────────────────── */
+  /* The phones take the free width, centred in it; the panel sits against the right edge. */
+  .phones { display: flex; gap: 22px; align-items: flex-start; justify-content: center; flex: 1; min-width: 0; }
+  .phone { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .phone h2 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .3px; color: var(--ink); }
+  .phone h2 b { padding: 2px 8px; border-radius: 99px; color: #fff; margin-inline-start: 6px; font-weight: 600; }
+  .phone.client h2 b { background: var(--client); } .phone.driver h2 b { background: var(--driver); }
+  .bezel { background: #0d0f13; border-radius: 34px; padding: 10px; box-shadow: 0 0 0 2px #2c3038, 0 20px 60px rgba(0,0,0,.5); }
+  .screen { width: 411px; height: 914px; border-radius: 26px; overflow: hidden; background: #fff; transform-origin: top left; }
+  .screen iframe { width: 411px; height: 914px; border: 0; display: block; }
+  .phone .links { font-size: 12px; color: var(--ink2); }
+  .phone .links a { color: inherit; }
+  .creds { font-size: 12px; color: var(--ink2); text-align: center; }
+  .creds b { font-family: ui-monospace, Menlo, monospace; font-weight: 600; color: var(--ink); user-select: all; }
+
+  /* ── "open alone": one phone, still in its frame, as tall as the window (for a projector) ── */
+  body.solo { align-items: center; padding: 0; }
+  body.solo .phone h2, body.solo .phone .links, body.solo .phone .creds { display: none; }
+  body.solo .phone:not(.on) { display: none; }
+
+  /* ── the control look, shared by the panel (English) and the solo driver's deck (Arabic) ── */
+  .ctl { color: var(--ink); scrollbar-width: none; }
+  .ctl::-webkit-scrollbar { display: none; }
+  .ctl header { display: flex; align-items: center; gap: 12px; padding: 4px 4px 2px; }
+  .ctl header > div:nth-child(2) { flex: 1; min-width: 0; }
+  .ctl .logo { flex: none; width: 40px; height: 40px; border-radius: 13px; background: var(--driver); display: grid; place-items: center;
+    font: 900 22px/1 system-ui; color: #fff; box-shadow: 0 6px 18px rgba(42,100,214,.45); }
+  .ctl h1 { margin: 0; font-size: 19px; font-weight: 800; } .ctl header p { margin: 0; color: var(--ink2); font-size: 13px; }
+  .ctl .card { background: var(--card); border: 1px solid var(--edge); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 7px; }
+  .ctl h2, .ctl summary { margin: 0 0 2px; font-size: 13px; font-weight: 700; color: var(--ink2); letter-spacing: .2px; display: flex; align-items: center; gap: 7px; }
+  .ctl h2 svg, .ctl summary svg { width: 16px; height: 16px; flex: none; }
+  .ctl summary { cursor: pointer; list-style: none; user-select: none; margin: -12px -14px; padding: 12px 14px; border-radius: 18px; }
+  .ctl summary::-webkit-details-marker { display: none; }
+  .ctl summary:hover { color: var(--ink); }
+  .ctl summary .chev { margin-inline-start: auto; transition: transform .2s; }
+  .ctl details[open] > summary { margin-bottom: 2px; }
+  .ctl details[open] > summary .chev { transform: rotate(180deg); }
+  .ctl details.card { display: block; } .ctl details.card > .body { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+  .ctl .badge { font: 700 11px/1 ui-monospace, Menlo, monospace; padding: 3px 7px; border-radius: 99px; background: var(--card2); color: var(--ink); }
+  .ctl .badge.hot { background: var(--driver); color: #fff; }
+  .ctl button { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 12px;
+    border-radius: 13px; padding: 8px 12px; background: var(--card2); color: var(--ink); font-size: 14.5px; font-weight: 700;
+    transition: background .15s, transform .08s, opacity .15s; }
+  .ctl button:hover { background: var(--hover); } .ctl button:active { transform: scale(.98); }
+  .ctl button[disabled] { opacity: .5; pointer-events: none; }
+  .ctl button:focus-visible, .ctl summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .ctl button .ic { flex: none; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.08); }
+  .ctl button .ic svg { width: 19px; height: 19px; }
+  .ctl button small { display: block; font-size: 12px; font-weight: 500; color: var(--ink3); margin-top: 1px; }
+  .ctl button.hero { background: var(--driver); padding: 11px 12px; } .ctl button.hero:hover { background: #3572e8; }
+  .ctl button.hero .ic { background: rgba(255,255,255,.18); } .ctl button.hero small { color: #d6e2fb; }
+  .ctl .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ctl .pair button { justify-content: center; font-size: 13.5px; padding: 10px; gap: 7px; }
+  .ctl .pair button svg { width: 16px; height: 16px; flex: none; }
+  .ctl .field { display: flex; align-items: center; gap: 8px; color: var(--ink2); font-size: 13px; }
+  .ctl input[type=number] { all: unset; box-sizing: border-box; width: 90px; padding: 7px 10px; border-radius: 10px; background: var(--well);
+    border: 1px solid var(--edge2); color: #fff; font: 700 15px ui-monospace, Menlo, monospace; text-align: center; }
+  .ctl input[type=number]:focus { border-color: var(--driver); }
+  .ctl .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ctl .chips button { padding: 6px 11px; border-radius: 99px; font: 600 12.5px ui-monospace, Menlo, monospace; background: var(--well); border: 1px solid var(--edge2); }
+  .ctl .chips button.on { background: var(--driver); border-color: var(--driver); }
+  .ctl .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ctl .stat { background: var(--well); border-radius: 13px; padding: 7px 12px; }
+  .ctl .stat span { display: block; font-size: 12px; color: var(--ink2); }
+  .ctl .stat b { font: 800 22px ui-monospace, Menlo, monospace; } .ctl .stat i { font-style: normal; font-size: 12px; color: var(--ink2); margin-inline-start: 4px; }
+  .ctl .stat.cash b { color: var(--cash); } .ctl .stat.owed b { color: var(--owed); } .ctl .stat.credit b { color: var(--ok); }
+  .ctl .stat small { display: block; font-size: 11.5px; color: var(--ink2); margin-top: 1px; }
+  .ctl .tone-cash .ic { background: rgba(52,195,165,.16); color: var(--cash); }
+  .ctl .tone-owed .ic { background: rgba(240,180,60,.16); color: var(--owed); }
+  .ctl .tone-pin .ic { background: rgba(42,100,214,.22); color: var(--blue); }
+  .ctl .tone-bad .ic { background: rgba(255,138,128,.14); color: var(--bad); }
+  .ctl .where, .ctl .note { font-size: 12.5px; color: var(--ink2); }
+  .ctl .msg { min-height: 18px; font-size: 13px; text-align: center; color: var(--ok); transition: opacity .3s; }
+  .ctl .msg.err { color: var(--bad); }
+  .ctl .gps { display: flex; flex-direction: column; gap: 8px; }
+
+  /* ── the solo driver's deck, pinned right ─────────────────────────── */
+  .deck { display: none; position: fixed; right: 24px; top: 50%; transform: translateY(-50%);
+    flex-direction: column; gap: 10px; width: 400px; max-height: calc(100vh - 24px); overflow-y: auto;
+    font-family: "Cairo", "Noto Sans Arabic", "Segoe UI", system-ui, sans-serif; transition: transform .3s ease, opacity .25s; }
+  body.solo.deck-on .deck { display: flex; }
+  /* It folds away to the right edge, leaving a small tab (the presenter's choice, remembered). */
+  body.deck-closed .deck { transform: translate(calc(100% + 40px), -50%); opacity: 0; pointer-events: none; }
+  #deck-toggle { display: none; position: fixed; top: 50%; right: 432px; transform: translateY(-50%); z-index: 12;
+    width: 28px; height: 64px; border: 0; border-radius: 12px; background: #2c3038; color: var(--ink2); cursor: pointer;
+    place-items: center; opacity: .75; transition: right .3s ease, opacity .15s, background .15s; }
+  #deck-toggle:hover { opacity: 1; background: #3a3f49; color: #fff; }
+  #deck-toggle svg { width: 18px; height: 18px; transition: transform .3s ease; }
+  body.solo.deck-on #deck-toggle { display: grid; }
+  body.deck-closed #deck-toggle { right: 0; border-radius: 12px 0 0 12px; opacity: .45; }
+  body.deck-closed #deck-toggle svg { transform: rotate(180deg); }
+
+  /* ── the panel: beside the phones; in the client's solo view, a drawer over the right edge ── */
+  .panel { flex: none; width: var(--pw); height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px;
+    transition: transform .3s ease, opacity .25s; }
+  /* Closed, it slides off the right edge but keeps its place, so the phones never move. */
+  body.panel-closed .panel { transform: translateX(calc(100% + 40px)); opacity: 0; pointer-events: none; }
+  .panel > *, .deck > * { flex: none; }
+  body.solo .panel { position: fixed; top: 12px; bottom: 12px; right: 12px; height: auto; z-index: 10; padding: 12px;
+    background: var(--bg); border-radius: 22px; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+  body.solo.deck-on .panel, body.solo.deck-on #panel-toggle { display: none !important; }
+  /* One toggle, always at the vertical middle: on the panel's left edge when open, on the screen's edge when closed
+     (as the solo driver's deck toggle). */
+  #panel-toggle { position: fixed; top: 50%; right: calc(16px + var(--pw) + 6px); transform: translateY(-50%); z-index: 12;
+    width: 28px; height: 64px; border: 0; border-radius: 12px; background: #2c3038; color: var(--ink2); cursor: pointer;
+    display: grid; place-items: center; opacity: .75; transition: right .3s ease, opacity .15s, background .15s; }
+  body.solo #panel-toggle { right: calc(12px + var(--pw) + 6px); }
+  #panel-toggle:hover { opacity: 1; background: #3a3f49; color: #fff; }
+  #panel-toggle svg { width: 18px; height: 18px; transition: transform .3s ease; }
+  body.panel-closed #panel-toggle { right: 0; border-radius: 12px 0 0 12px; opacity: .6; }
+  body.panel-closed #panel-toggle svg { transform: rotate(180deg); }
+  /* Full screen (the Fullscreen API): a blue corner button, or the F key. */
+  #fs { position: fixed; top: 12px; left: 12px; z-index: 13; width: 40px; height: 40px; border: 1px solid rgba(255,255,255,.25); border-radius: 12px;
+    cursor: pointer; display: grid; place-items: center; background: var(--driver); color: #fff;
+    box-shadow: 0 6px 18px rgba(42,100,214,.45); transition: background .15s, opacity .15s; }
+  #fs:hover { background: #3572e8; }
+  #fs svg { width: 20px; height: 20px; } #fs .off { display: none; }
+  body.fs #fs { opacity: .8; } body.fs #fs:hover { opacity: 1; }
+  body.fs #fs .on { display: none; } body.fs #fs .off { display: block; }
+  .panel .msg { position: sticky; bottom: 0; }
+  .panel .msg:not(:empty) { background: var(--card); border: 1px solid var(--edge2); border-radius: 12px; padding: 8px 12px; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
+
+  /* orders list */
+  .seg { display: inline-flex; background: var(--well); border-radius: 10px; padding: 3px; gap: 2px; align-self: flex-start; }
+  .ctl .seg button { padding: 5px 12px; border-radius: 8px; font-size: 12.5px; background: none; color: var(--ink2); }
+  .ctl .seg button.on { background: var(--card2); color: var(--ink); }
+  .switchrow { display: flex; align-items: center; gap: 12px; background: var(--well); border-radius: 13px; padding: 9px 12px; cursor: pointer; }
+  .switchrow > span { flex: 1; font-weight: 700; font-size: 14px; } .switchrow small { display: block; font-weight: 500; font-size: 12px; color: var(--ink2); margin-top: 1px; }
+  .switchrow input { appearance: none; flex: none; width: 40px; height: 22px; border-radius: 99px; background: var(--edge2); position: relative; cursor: pointer; transition: background .2s; margin: 0; }
+  .switchrow input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .2s; }
+  .switchrow input:checked { background: var(--driver); } .switchrow input:checked::after { transform: translateX(18px); }
+  .orders { display: flex; flex-direction: column; gap: 6px; }
+  .order { background: var(--well); border-radius: 13px; padding: 9px 12px; display: flex; flex-direction: column; gap: 4px; }
+  .order .top { display: flex; align-items: center; gap: 8px; }
+  .order .place { flex: 1; min-width: 0; font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .order .extra { flex: none; font-size: 12px; color: var(--ink2); }
+  .ctl .orders > button.more { justify-content: center; font-size: 13px; padding: 8px; background: none; border: 1px dashed var(--edge2); color: var(--ink2); }
+  .ctl .orders > button.more:hover { color: var(--ink); background: var(--well); }
+  .order .meta { font-size: 12px; color: var(--ink2); display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .order .meta b { color: var(--ink); font-weight: 600; }
+  .order .num { font-family: ui-monospace, Menlo, monospace; }
+  .order .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; align-items: center; }
+  .ctl .order .acts button { padding: 5px 10px; border-radius: 9px; font-size: 12.5px; gap: 6px; }
+  .ctl .order .acts button.go { background: var(--driver); } .ctl .order .acts button.go:hover { background: #3572e8; }
+  .ctl .order .acts button.bad { color: var(--bad); background: none; margin-inline-start: auto; } .ctl .order .acts button.bad:hover { background: rgba(255,138,128,.1); }
+  .ctl .order .acts input[type=number] { width: 64px; padding: 4px 6px; font-size: 13px; }
+  .order .acts .unit { font-size: 12px; color: var(--ink2); }
+  .pill { flex: none; padding: 2px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 600; background: var(--card2); color: var(--ink2); }
+  .pill.wait { background: rgba(240,180,60,.15); color: var(--owed); }
+  .pill.pool { background: rgba(42,100,214,.22); color: var(--blue); }
+  .pill.live { background: rgba(95,208,138,.14); color: var(--ok); }
+  .pill.bad { background: rgba(255,138,128,.14); color: var(--bad); }
+  .otp { display: flex; align-items: center; gap: 10px; background: var(--well); border-radius: 13px; padding: 8px 12px; }
+  .otp div { flex: 1; font-size: 12.5px; color: var(--ink2); } .otp div b { display: block; color: var(--ink); font-size: 13.5px; }
+  .otp code { font: 800 20px ui-monospace, Menlo, monospace; letter-spacing: 3px; color: var(--ok); user-select: all; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ctl .swatch { padding: 6px 11px 6px 8px; border-radius: 99px; font-size: 12.5px; gap: 7px; background: var(--well); border: 1px solid var(--edge2); }
+  .swatch i { width: 14px; height: 14px; border-radius: 50%; background: var(--c); }
+  .ctl .swatch[aria-pressed=true] { border-color: var(--ink); }
+  .ctl input[type=color] { width: 34px; height: 28px; padding: 0 2px; border: 1px solid var(--edge2); border-radius: 8px; background: var(--well); cursor: pointer; }
+  .tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ctl .tools button { flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px 12px; font-size: 13.5px; }
+  .ctl .tools button small { font-size: 11.5px; }
+</style>
+</head>
+<body>
+  <div class="phones" id="phones">
+    <div class="phone client">
+      <h2>Client phone <b>عميل</b></h2>
+      <div class="bezel"><div class="screen"><iframe id="client" title="Client phone"></iframe></div></div>
+      <div class="links"><a id="client-open" target="_blank">open alone</a> · <a href="#" data-reload="client">relaunch app</a></div>
+      <div class="creds" id="client-creds"></div>
+    </div>
+    <div class="phone driver">
+      <h2>Driver phone <b>سائق</b></h2>
+      <div class="bezel"><div class="screen"><iframe id="driver" title="Driver phone"></iframe></div></div>
+      <div class="links"><a id="driver-open" target="_blank">open alone</a> · <a href="#" data-reload="driver">relaunch app</a></div>
+      <div class="creds" id="driver-creds"></div>
+    </div>
+  </div>
+
+  <!-- The solo driver's deck (Arabic: the audience reads it); filled by driverCards("ar"). -->
+  <aside class="deck ctl" dir="rtl" lang="ar" id="deck">
+    <header><div class="logo">X</div><div><h1>لوحة تحكم الشركة</h1><p>اللي بيعمله الداشبورد، بيوصل لموبايل السواق</p></div></header>
+    <div class="msg"></div>
+  </aside>
+  <button id="deck-toggle" aria-controls="deck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+
+  <!-- The presenter's panel: the same driver controls, plus the rest of the outside world. -->
+  <aside class="panel ctl" lang="en" id="panel">
+    <header>
+      <div class="logo">X</div>
+      <div><h1>Control panel</h1><p>Plays everything outside the two phones: the company dashboard, the driver's GPS, WhatsApp.</p></div>
+    </header>
+
+    <!-- driverCards("en") go here -->
+
+    <details class="card" data-key="orders" open>
+      <summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+        All orders <span class="badge" id="o-count">0</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+      <div class="body">
+        <label class="switchrow"><span>Auto-dispatch<small id="auto-sub"></small></span><input type="checkbox" id="auto" role="switch" /></label>
+        <div class="seg" id="o-filter"><button data-f="open" class="on">Open</button><button data-f="all">All</button></div>
+        <div class="orders" id="orders"></div>
+      </div>
+    </details>
+
+    <details class="card" data-key="otp">
+      <summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>
+        WhatsApp codes <span class="badge" id="otp-count" hidden></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+      <div class="body">
+        <div class="note">The verification and password-reset codes the backend would send by WhatsApp.</div>
+        <div id="otps" class="orders"></div>
+      </div>
+    </details>
+
+    <details class="card" data-key="brand">
+      <summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="15.5" cy="10" r="1.2"/><path d="M12 21a2.5 2.5 0 0 1 0-5h1.5a3 3 0 0 0 3-3"/></svg>
+        Client app colour<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+      <div class="body">
+        <div class="note">Recolours every client screen (buttons, logo, map pins). Both phones relaunch; the driver app stays blue.</div>
+        <div class="swatches" id="brand-presets"></div>
+        <label class="field">Custom <input type="color" id="brand-pick" /> <span class="num" id="brand-now"></span></label>
+      </div>
+    </details>
+
+    <details class="card" data-key="tools">
+      <summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+        Reset &amp; relaunch<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+      <div class="body">
+        <div class="tools">
+          <button class="tone-bad" data-do="clear-client"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></span><span>Clear the client's orders<small>Shows the client app's empty screens</small></span></button>
+          <button class="tone-bad" data-do="clear-driver"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></span><span>Clear the driver's orders<small>His orders, pool and suggestions</small></span></button>
+          <button class="tone-bad" data-do="reset"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></span><span>Reset everything<small>All data back to the start; sign-in again</small></span></button>
+          <button data-do="relaunch"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg></span><span>Relaunch both apps<small>Like closing and reopening them</small></span></button>
+        </div>
+        <div class="note">Everything runs in this browser; nothing is sent anywhere.</div>
+      </div>
+    </details>
+
+    <div class="msg"></div>
+  </aside>
+  <button id="fs" title="Full screen (F)" aria-label="Full screen">
+    <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
+  </button>
+  <button id="panel-toggle" aria-controls="panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  // Where the app is: this server's root, or the folder <html data-app> names (GitHub Pages: "app/").
+  const appDir = document.documentElement.dataset.app;
+  const APP = params.get("app") || (appDir ? new URL(appDir, location.href).href.replace(/\/$/, "") : location.origin);
+  // ?solo=client|driver — "open alone": that phone only, framed, filling the window height.
+  const SOLO = ["client", "driver"].includes(params.get("solo")) ? params.get("solo") : null;
+  const frames = { client: document.getElementById("client"), driver: document.getElementById("driver") };
+  if (SOLO) {
+    document.body.classList.add("solo");
+    document.querySelector(`.phone.${SOLO}`).classList.add("on");
+    if (SOLO === "driver") document.body.classList.add("deck-on");
+    document.title = `DeliverX — ${SOLO} phone`;
+  }
+  for (const [id, f] of Object.entries(frames)) {
+    if (SOLO && id !== SOLO) { f.remove(); delete frames[id]; continue; }
+    // The solo phone is its own device (own session), as the old full-window link was.
+    f.src = `${APP}/?device=${SOLO ? `${id}-solo` : id}`;
+    const solo = new URLSearchParams({ solo: id });
+    if (params.has("app")) solo.set("app", params.get("app"));
+    document.getElementById(`${id}-open`).href = `${location.pathname}?${solo}`;
+  }
+
+  // Fit the phones to the window (solo: fill its height, scaling up on big screens).
+  function fit() {
+    const cl = document.body.classList;
+    let s;
+    if (SOLO) {
+      // The phone stays centred; with the deck pinned right, keep clear of it on both sides.
+      const deck = cl.contains("deck-on") && !cl.contains("deck-closed") ? 2 * (400 + 24 + 32) : cl.contains("deck-on") ? 24 + 2 * 32 : 24;
+      s = Math.min((innerHeight - 24) / 934, (innerWidth - deck) / 431);
+    } else {
+      const panel = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--pw")) + 20; // kept while the panel is closed: the phones stay put
+      s = Math.min(1, (innerHeight - 110) / 934, (innerWidth - 32 - panel - 22) / (2 * 431));
+    }
+    const pad = 10 * Math.max(1, s);
+    document.querySelectorAll(".screen").forEach((el) => {
+      el.style.transform = `scale(${s})`;
+      const bezel = el.parentElement;
+      bezel.style.padding = `${pad}px`;
+      bezel.style.borderRadius = `${34 * Math.max(1, s)}px`;
+      bezel.style.width = `${411 * s + 2 * pad}px`;
+      bezel.style.height = `${914 * s + 2 * pad}px`;
+    });
+  }
+  addEventListener("resize", fit);
+
+  // Solo: every call goes to the one phone (the backend is shared, so any phone can play the dashboard).
+  const phoneFrame = (p) => frames[p] ?? frames[SOLO];
+
+  // RPC into a phone (source/bootstrap.ts).
+  let seq = 0; const pending = new Map();
+  addEventListener("message", (e) => {
+    const m = e.data;
+    if (m?.proto === "result" && pending.has(m.id)) {
+      const { resolve, reject } = pending.get(m.id); pending.delete(m.id);
+      m.error ? reject(new Error(m.error)) : resolve(m.value);
+    } else if (m?.proto === "changed") schedule();
+  });
+  function call(phone, path, ...args) {
+    return new Promise((resolve, reject) => {
+      const id = ++seq; pending.set(id, { resolve, reject });
+      phoneFrame(phone).contentWindow.postMessage({ proto: "call", id, path, args }, "*");
+      setTimeout(() => { if (pending.has(id)) { pending.delete(id); reject(new Error("phone not ready")); } }, 4000);
+    });
+  }
+
+  /* ── the driver controls, in either language ───────────────────────── */
+  const I = {
+    box: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/>',
+    bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+    bin: '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>',
+    undo: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+    wallet: '<path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7V6a2 2 0 0 1 2-2h11M16 13h.01"/>',
+    cash: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
+    down: '<path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v3h16v-3"/>',
+    card: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>',
+    pin: '<path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
+    chev: '<path d="m6 9 6 6 6-6"/>',
+  };
+  const svg = (k, cls = "") => `<svg ${cls ? `class="${cls}" ` : ""}viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${k === "chev" ? 2.5 : 2}" stroke-linecap="round" stroke-linejoin="round">${I[k]}</svg>`;
+  const T = {
+    ar: {
+      orders: "الطلبات", money: "الفلوس", gps: "موقع السواق", egp: "ج.م",
+      suggest: ["ابعت طلب للسواق", "إشعار، والطلب يفتح للقبول أو الرفض"],
+      pool: ["ضيف طلب في الطلبات المتاحة", "يظهر لكل السواقين في «متاحة»"],
+      fee: "سعر التوصيل", empty: "من غير طلبات", restore: "رجّع الطلبات",
+      custody: ["العهدة اللي معاه", "ليه عند الشركة (عهدة)", ""], due: ["العمولة عليه", "ليه رصيد (عمولة)", ""],
+      amount: "المبلغ",
+      give: ["إدّي السواق عهدة", "فلوس من الشركة مع السواق"],
+      back: ["استلم العهدة من السواق", "السواق رجّع فلوس العهدة"],
+      pay: ["السواق سدّد العمولة", "تتخصم من أقدم الطلبات الأول"],
+      next: (n) => [`سوق لـ «${n}»`, "المحطة الجاية · 20 ثانية"],
+      deliver: (l) => ["سوق لمكان التسليم", `${l} · 20 ثانية`],
+      home: ["رجّع السواق لمكانه الأصلي", "الموقع اللي بيبدأ منه"],
+      working: (n) => `شغال دلوقتي على ${n}`,
+      idle: "مفيش طلب شغال — لما يقبل طلب ويبدأه، هتظهر هنا أزرار السواقة للمحطة والتسليم.",
+      ok: { suggest: "اتبعت طلب للسواق ✓", pool: "الطلب نزل في الطلبات المتاحة ✓", empty: "السواق دلوقتي من غير طلبات",
+        restore: "الطلبات رجعت ✓", "custody-give": "السواق استلم العهدة ✓", "custody-back": "العهدة اتسلمت من السواق ✓",
+        pay: "اتسجل السداد ✓", drive: "السواق ماشي… (20 ثانية)", home: "رجع لمكانه الأصلي" },
+    },
+    en: {
+      orders: "Driver training", money: "Driver's money", gps: "Driver location", egp: "EGP",
+      suggest: ["Send an order to the driver", "Push notification; the order opens to accept or reject"],
+      pool: ["Add an order to the available pool", "Every driver sees it under “Available”"],
+      fee: "Delivery fee", empty: "Clear his orders", restore: "Restore samples",
+      custody: ["Company cash he holds", "Company owes him", "custody · عهدة"],
+      due: ["Commission he owes", "In credit with the company", "on delivered orders"],
+      amount: "Amount",
+      give: ["Give him custody", "Company cash handed to the driver"],
+      back: ["Take custody back", "The driver returns the cash"],
+      pay: ["Driver paid his commission", "Settles his oldest orders first"],
+      next: (n) => [`Drive to “\u2068${n}\u2069”`, "Next stop · 20 s"],
+      deliver: (l) => ["Drive to the delivery point", `\u2068${l}\u2069 · 20 s`],
+      home: ["Back to the start point", "Where the driver starts the day"],
+      working: (n) => `Working on ${n}`,
+      idle: "No order in progress. Once he starts one, buttons to drive to the stop and the delivery point show here.",
+      ok: { suggest: "Order sent to the driver ✓", pool: "Order added to the available pool ✓", empty: "The driver has no orders now",
+        restore: "Sample orders are back ✓", "custody-give": "Custody given ✓", "custody-back": "Custody taken back ✓",
+        pay: "Payment recorded ✓", drive: "Driving… (20 s)", home: "Back at the start point",
+        "clear-client": "The client has no orders now", "clear-driver": "The driver has no orders now",
+        reset: "Everything is back to the start", relaunch: "Both apps relaunched", offer: "Offer sent ✓",
+        suggestTo: "Suggested to the driver ✓", cancel: "Order cancelled" },
+    },
+  };
+  const action = (icon, [title, sub], doIt, cls = "") =>
+    `<button class="${cls}" data-do="${doIt}"><span class="ic">${svg(icon)}</span><span>${title}<small>${sub}</small></span></button>`;
+  function card(collapsible, key, icon, title, body) {
+    return collapsible
+      ? `<details class="card" data-key="${key}" open><summary>${svg(icon)} ${title}${svg("chev", "chev")}</summary><div class="body">${body}</div></details>`
+      : `<div class="card"><h2>${svg(icon)} ${title}</h2>${body}</div>`;
+  }
+  function driverCards(lang) {
+    const t = T[lang], c = lang === "en";
+    return card(c, "driver", "box", t.orders,
+        action("box", t.suggest, "suggest", "hero") + action("bolt", t.pool, "pool") +
+        `<label class="field">${t.fee} <input type="number" name="fee" value="25" min="0" /> ${t.egp}</label>
+         <div class="pair"><button data-do="empty">${svg("bin")} ${t.empty}</button><button data-do="restore">${svg("undo")} ${t.restore}</button></div>`) +
+      card(c, "money", "wallet", t.money,
+        `<div class="stats">
+           <div class="stat cash" data-stat="custody"><span>${t.custody[0]}</span><b>0.00</b><i>${t.egp}</i>${t.custody[2] ? `<small>${t.custody[2]}</small>` : ""}</div>
+           <div class="stat owed" data-stat="due"><span>${t.due[0]}</span><b>0.00</b><i>${t.egp}</i>${t.due[2] ? `<small>${t.due[2]}</small>` : ""}</div>
+         </div>
+         <label class="field">${t.amount} <input type="number" name="amount" value="200" min="1" /> ${t.egp}</label>
+         <div class="chips">${[50, 100, 200, 500].map((v) => `<button data-v="${v}"${v === 200 ? ' class="on"' : ""}>${v}</button>`).join("")}</div>` +
+        action("cash", t.give, "custody-give", "tone-cash") + action("down", t.back, "custody-back", "tone-cash") + action("card", t.pay, "pay", "tone-owed")) +
+      card(c, "gps", "pin", t.gps, `<div class="gps"></div><div class="where"></div>`);
+  }
+  const deckEl = document.getElementById("deck"), panelEl = document.getElementById("panel");
+  deckEl.querySelector("header").insertAdjacentHTML("afterend", driverCards("ar"));
+  panelEl.querySelector("header").insertAdjacentHTML("afterend", driverCards("en"));
+  const ROOTS = [deckEl, panelEl];
+  const langOf = (root) => (root === deckEl ? "ar" : "en");
+
+  // Feedback under the controls it came from.
+  const msgTimers = new Map();
+  function say(root, text, err = false) {
+    const el = root.querySelector(":scope > .msg");
+    el.textContent = text; el.className = "msg" + (err ? " err" : "");
+    clearTimeout(msgTimers.get(root)); msgTimers.set(root, setTimeout(() => (el.textContent = ""), 3500));
+  }
+  const val = (root, name) => Number(root.querySelector(`input[name=${name}]`).value);
+  // What each button does (its feedback is T[lang].ok[name]).
+  const ACTIONS = {
+    suggest: (r) => call("driver", "training.suggestOrder", val(r, "fee")),
+    pool: (r) => call("driver", "training.poolOrder", val(r, "fee")),
+    empty: () => call("driver", "dashboard.clearOrders", "driver"),
+    restore: () => call("driver", "dashboard.restoreOrders"),
+    "custody-give": (r) => call("driver", "training.giveCustody", val(r, "amount")),
+    "custody-back": (r) => call("driver", "training.receiveCustody", val(r, "amount")),
+    pay: (r) => call("driver", "training.recordPayment", val(r, "amount")),
+    "clear-client": () => call("client", "dashboard.clearOrders", "client"),
+    "clear-driver": () => call("client", "dashboard.clearOrders", "driver"),
+    reset: () => call("client", "reset"),
+    relaunch: async () => Object.values(frames).forEach((f) => (f.src = f.src)),
+  };
+  /** A button that runs `fn`, disabled meanwhile, then says how it went. */
+  function wire(b, root, fn, ok) {
+    b.onclick = async () => {
+      b.disabled = true;
+      try { await fn(); if (ok) say(root, ok); } catch (e) { say(root, e.message, true); }
+      b.disabled = false; schedule();
+    };
+  }
+  for (const root of ROOTS) {
+    root.querySelectorAll("[data-do]").forEach((b) => wire(b, root, () => ACTIONS[b.dataset.do](root), T[langOf(root)].ok[b.dataset.do]));
+    const amount = root.querySelector("input[name=amount]"), chips = root.querySelectorAll(".chips button");
+    chips.forEach((c) => (c.onclick = () => { amount.value = c.dataset.v; chips.forEach((x) => x.classList.toggle("on", x === c)); }));
+    amount.oninput = () => chips.forEach((x) => x.classList.toggle("on", x.dataset.v === amount.value));
+  }
+
+  /** Money tiles, GPS buttons and the working-order line, from the backend's state. */
+  function renderDriver(root, state, working) {
+    const t = T[langOf(root)], m = state.driverMoney;
+    if (m) {
+      const stat = (key, value, labels, normal) => {
+        const el = root.querySelector(`[data-stat=${key}]`);
+        const flip = value < -0.004;
+        el.className = `stat ${flip ? "credit" : normal}`;
+        el.querySelector("span").textContent = flip ? labels[1] : labels[0];
+        el.querySelector("b").textContent = Math.abs(value).toFixed(2);
+      };
+      stat("custody", m.custody, t.custody, "cash");
+      stat("due", m.commissionDue, t.due, "owed");
+    }
+    const box = root.querySelector(".gps"); box.innerHTML = "";
+    const go = ([title, sub], lat, lng, secs) => {
+      const b = document.createElement("button"); b.className = "tone-pin";
+      b.innerHTML = `<span class="ic">${svg("pin")}</span><span></span>`;
+      const label = b.lastElementChild, small = document.createElement("small");
+      label.append(title); small.textContent = sub; label.append(small);
+      wire(b, root, () => call("driver", secs ? "driveTo" : "setPosition", lat, lng, secs), secs ? t.ok.drive : t.ok.home);
+      box.append(b);
+    };
+    if (working) {
+      const next = working.stops.find((x) => !x.done && x.lat != null);
+      if (next) go(t.next(next.name), next.lat, next.lng, 20);
+      if (working.delivery) go(t.deliver(working.delivery.label ?? ""), working.delivery.lat, working.delivery.lng, 20);
+    }
+    go(t.home, 30.6166747, 32.2920771, 0);
+    root.querySelector(".where").textContent = working ? t.working(working.number) : t.idle;
+  }
+
+  /* ── the panel's own sections ──────────────────────────────────────── */
+  const LABEL = {
+    waiting_for_offer: ["Needs a price offer", "wait"], waiting_for_client_approval: ["Offer sent · client deciding", "wait"],
+    waiting_driver_assignment: ["In the available pool", "pool"], suggested_by_tenant: ["Suggested to the driver", "pool"],
+    accepted_by_driver: ["Driver accepted", "live"], out_for_delivery: ["On the way", "live"],
+    arrived_delivery_location: ["Driver arrived", "live"], completed: ["Delivered", ""],
+    client_rejected: ["Client rejected the offer", "bad"], cancelled_by_tenant: ["Cancelled", "bad"],
+  };
+  const CLOSED = ["completed", "client_rejected", "cancelled_by_tenant"];
+  let filter = "open", expanded = false, timer = null, state = null;
+  const SHORT = 6;
+  document.querySelectorAll("#o-filter button").forEach((b) => (b.onclick = () => {
+    filter = b.dataset.f; expanded = false; document.querySelectorAll("#o-filter button").forEach((x) => x.classList.toggle("on", x === b)); render();
+  }));
+  function schedule() { clearTimeout(timer); timer = setTimeout(refresh, 250); }
+
+  async function refresh() {
+    try { state = await call("driver", "state"); } catch { try { state = await call("client", "state"); } catch { return; } }
+    render();
+  }
+
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  function orderCard(o, driver) {
+    const ok = T.en.ok;
+    const [label, tone] = LABEL[o.status] ?? [o.status, ""];
+    const card = el("div", "order");
+    const top = el("div", "top");
+    const place = el("div", "place", o.stops[0]?.name ?? "—");
+    place.dir = "auto";
+    top.append(place);
+    if (o.stops.length > 1) top.append(el("span", "extra", `+${o.stops.length - 1} stop${o.stops.length > 2 ? "s" : ""}`));
+    top.append(el("span", `pill ${tone}`, label));
+    const meta = el("div", "meta");
+    meta.append(el("span", "num", o.number));
+    const who = (k, v) => { const s = el("span", "", `${k} `); const b = el("b", "", v); b.dir = "auto"; s.append(b); return s; };
+    if (o.client) meta.append(who("Client", o.client));
+    meta.append(who("Driver", o.driver ?? "none yet"));
+    if (o.shipping != null && o.status !== "waiting_for_offer") meta.append(who("Fee", `${Number(o.shipping).toFixed(0)} EGP`));
+    card.append(top, meta);
+    const acts = el("div", "acts");
+    if (o.status === "waiting_for_offer") {
+      const fee = el("input"); fee.type = "number"; fee.value = 25; fee.min = 0;
+      const b = el("button", "go", "Send offer");
+      wire(b, panelEl, () => call("client", "dashboard.sendOffer", o.id, Number(fee.value)), ok.offer);
+      acts.append(fee, el("span", "unit", "EGP"), b);
+    }
+    if (["waiting_driver_assignment", "suggested_by_tenant"].includes(o.status) && driver) {
+      const b = el("button", "", o.status === "suggested_by_tenant" ? "Suggest again" : `Suggest to \u2068${driver.name}\u2069`);
+      wire(b, panelEl, () => call("client", "dashboard.suggestDriver", o.id, driver.id), ok.suggestTo);
+      acts.append(b);
+    }
+    if (!CLOSED.includes(o.status)) {
+      const b = el("button", "bad", "Cancel");
+      wire(b, panelEl, () => call("client", "dashboard.cancel", o.id), ok.cancel);
+      acts.append(b);
+    }
+    if (acts.children.length) card.append(acts);
+    return card;
+  }
+
+  function render() {
+    if (!state) return;
+    const auto = document.getElementById("auto");
+    auto.checked = state.autoDispatch;
+    document.getElementById("auto-sub").textContent = state.autoDispatch
+      ? "On: the client's new orders are priced at 25 EGP and go straight to the driver."
+      : "Off: the client's new orders wait here for you to send a price offer.";
+    const open = state.orders.filter((o) => !CLOSED.includes(o.status));
+    const list = filter === "all" ? state.orders : open;
+    document.getElementById("o-count").textContent = open.length;
+    document.getElementById("o-count").title = `${open.length} open orders`;
+    const driver = state.drivers.find((d) => d.name === state.testDriver);
+    const box = document.getElementById("orders"); box.innerHTML = "";
+    for (const o of expanded ? list : list.slice(0, SHORT)) box.append(orderCard(o, driver));
+    if (list.length > SHORT) {
+      const more = el("button", "more", expanded ? "Show fewer" : `Show all ${list.length}`);
+      more.onclick = () => { expanded = !expanded; render(); };
+      box.append(more);
+    }
+    if (!list.length) box.append(el("div", "note", filter === "all" ? "No orders at all." : "No open orders."));
+
+    // GPS targets: the driver's working order — next open stop, then the delivery point.
+    const working = state.orders.find((o) => o.driver === state.testDriver && ["out_for_delivery", "accepted_by_driver"].includes(o.status))
+      || state.orders.find((o) => o.driver === state.testDriver && o.status === "arrived_delivery_location");
+    renderDriver(document.body.classList.contains("deck-on") ? deckEl : panelEl, state, working);
+
+    const otps = document.getElementById("otps"); otps.innerHTML = "";
+    const live = state.otps.filter((o) => o.expires > Date.now());
+    const count = document.getElementById("otp-count");
+    count.hidden = !live.length; count.textContent = live.length; count.className = "badge hot";
+    for (const o of live) {
+      const [purpose, phone] = o.key.split(":");
+      const what = { verify: "Phone verification", reset: "Password reset", change: "Phone change" }[purpose] ?? purpose;
+      const row = el("div", "otp"); const d = el("div", "", `to ${phone}`); d.prepend(el("b", "", what));
+      row.append(d, el("code", "", o.code)); otps.append(row);
+    }
+    if (!live.length) otps.append(el("div", "note", "No codes sent yet."));
+  }
+
+  // Client brand: presets come from the phone (source/brand/brand.json).
+  let brand = null;
+  async function loadBrand() {
+    try { brand = await call("client", "brand"); } catch { return; }
+    document.documentElement.style.setProperty("--client", brand.accent);
+    document.getElementById("brand-pick").value = brand.accent;
+    document.getElementById("brand-now").textContent = brand.accent + (brand.accent === brand.default ? " · the app's own" : "");
+    const row = document.getElementById("brand-presets"); row.innerHTML = "";
+    for (const p of brand.presets) {
+      const b = el("button", "swatch");
+      b.style.setProperty("--c", p.accent); b.setAttribute("aria-pressed", String(p.accent === brand.accent));
+      b.innerHTML = "<i></i>"; b.append(p.name); b.onclick = () => setBrand(p.accent);
+      row.append(b);
+    }
+  }
+  async function setBrand(hex) {
+    if (brand && hex.toLowerCase() === brand.accent) return;
+    try { await call("client", "setBrand", hex); } catch (e) { say(panelEl, e.message, true); }
+    // The phones relaunch themselves; read the new accent once they are back.
+  }
+  document.getElementById("brand-pick").onchange = (e) => setBrand(e.target.value);
+  document.getElementById("auto").onchange = async (e) => {
+    try { await call("client", "dashboard.setAutoDispatch", e.target.checked); } catch (err) { say(panelEl, err.message, true); }
+    schedule();
+  };
+
+  /* ── showing and hiding the panel and the deck (each remembered) ───── */
+  const panelKey = `dx:panel-closed:${SOLO ?? "both"}`;
+  const panelToggle = document.getElementById("panel-toggle");
+  function setPanel(closed) {
+    document.body.classList.toggle("panel-closed", closed);
+    panelToggle.title = closed ? "Show the control panel" : "Hide the control panel";
+    panelToggle.setAttribute("aria-expanded", String(!closed));
+    localStorage.setItem(panelKey, closed ? "1" : "0");
+    fit(); if (!closed) render();
+  }
+  // The client's solo view keeps it hidden from the audience until asked for.
+  setPanel((localStorage.getItem(panelKey) ?? (SOLO ? "1" : "0")) === "1");
+  panelToggle.onclick = () => setPanel(!document.body.classList.contains("panel-closed"));
+  // The panel's sections fold too, and stay as they were left.
+  panelEl.querySelectorAll("details[data-key]").forEach((d) => {
+    const k = `dx:section:${d.dataset.key}`;
+    if (localStorage.getItem(k) === "0") d.open = false;
+    d.addEventListener("toggle", () => localStorage.setItem(k, d.open ? "1" : "0"));
+  });
+  const deckToggle = document.getElementById("deck-toggle");
+  function setDeck(closed) {
+    document.body.classList.toggle("deck-closed", closed);
+    deckToggle.title = closed ? "افتح لوحة التحكم" : "اقفل لوحة التحكم";
+    deckToggle.setAttribute("aria-expanded", String(!closed));
+    localStorage.setItem("dx:deck-closed", closed ? "1" : "");
+    fit();
+  }
+  if (SOLO === "driver") setDeck(localStorage.getItem("dx:deck-closed") === "1");
+  deckToggle.onclick = () => setDeck(!document.body.classList.contains("deck-closed"));
+  fit();
+
+  // Full screen: the whole page (phones and controls), for the projector. The phones refit on the resize it causes.
+  const fsButton = document.getElementById("fs");
+  function toggleFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.().catch(() => {});
+  }
+  fsButton.onclick = toggleFullscreen;
+  document.addEventListener("fullscreenchange", () => {
+    const on = !!document.fullscreenElement;
+    document.body.classList.toggle("fs", on);
+    fsButton.title = on ? "Exit full screen (F or Esc)" : "Full screen (F)";
+    fsButton.setAttribute("aria-label", on ? "Exit full screen" : "Full screen");
+  });
+  // F toggles it, unless typing in a field (keys typed inside a phone stay in the phone).
+  addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() !== "f" || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target.closest?.("input, textarea, [contenteditable]")) return;
+    e.preventDefault(); toggleFullscreen();
+  });
+
+  document.querySelectorAll("[data-reload]").forEach((a) => (a.onclick = (e) => { e.preventDefault(); const f = frames[a.dataset.reload]; f.src = f.src; }));
+  Object.values(frames).forEach((f) => f.addEventListener("load", () => [1500, 3500, 6000].forEach((t) => setTimeout(refresh, t))));
+  phoneFrame("client").addEventListener("load", () => [1500, 3500].forEach((t) => setTimeout(loadBrand, t)));
+
+  // The test accounts (source/accounts.json), which the login screen comes pre-filled with.
+  async function loadAccounts() {
+    let a;
+    try { a = await call("client", "accounts"); } catch { return; }
+    for (const who of ["client", "driver"]) {
+      const c = document.getElementById(`${who}-creds`);
+      c.innerHTML = "Login: <b></b> · password <b></b>";
+      c.children[0].textContent = a[who].phone; c.children[1].textContent = a[who].password;
+    }
+  }
+  phoneFrame("client").addEventListener("load", () => [1500, 3500].forEach((t) => setTimeout(loadAccounts, t)));
+  setInterval(refresh, 5000);
+</script>
+</body>
+</html>

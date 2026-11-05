@@ -1,0 +1,6 @@
+<!doctype html><meta charset="utf-8"><title>DeliverX</title>
+<script>
+  // A reload inside the app restarts it (it keeps its phone in sessionStorage); anything else → the showcase.
+  var app = "/deliverx-demo/app/";
+  location.replace(location.pathname.indexOf(app) === 0 ? app : "/deliverx-demo/");
+</script>
